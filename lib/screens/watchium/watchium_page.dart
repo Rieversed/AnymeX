@@ -7,6 +7,7 @@ import 'package:anymex/utils/theme_extensions.dart';
 import 'package:anymex/widgets/common/anymex_scaffold.dart';
 import 'package:anymex/widgets/anymex_widgets/anymex_image.dart';
 import 'package:anymex/widgets/helper/tv_wrapper.dart';
+import 'package:anymex/widgets/anymex_widgets/anymex_expansion_tile.dart';
 import 'package:anymex/widgets/anymex_widgets/anymex_text.dart';
 import 'package:anymex/widgets/non_widgets/snackbar.dart';
 import 'package:anymex/widgets/watchium/watchium_server_sheet.dart';
@@ -25,6 +26,7 @@ class WatchiumPage extends StatefulWidget {
 class _WatchiumPageState extends State<WatchiumPage> {
   final WatchiumService _watchium = Get.find<WatchiumService>();
   final _joinCodeController = TextEditingController();
+  final _codeFocusNode = FocusNode();
   bool _isLoading = false;
   String? _error;
 
@@ -32,11 +34,18 @@ class _WatchiumPageState extends State<WatchiumPage> {
   void initState() {
     super.initState();
     _loadRooms();
+    _codeFocusNode.addListener(() {
+      if (mounted) setState(() {});
+    });
+    _joinCodeController.addListener(() {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
     _joinCodeController.dispose();
+    _codeFocusNode.dispose();
     super.dispose();
   }
 
@@ -177,32 +186,67 @@ class _WatchiumPageState extends State<WatchiumPage> {
                       return const SizedBox.shrink();
                     }),
                     const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        const AnymeXText('Active Rooms',
-                          size: 16,
-                          variant: TextVariant.semiBold,
-                        ),
-                        const SizedBox(width: 8),
-                        Obx(() {
-                          final count = _watchium.publicRooms.length;
-                          return Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primaryContainer,
-                              borderRadius: BorderRadius.circular(10),
+                    AnymeXCard(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.primaryContainer
+                                      .opaque(0.35, iReallyMeanIt: true),
+                                  borderRadius: BorderRadius.circular(
+                                      10.multiplyRadius()),
+                                  border: Border.all(
+                                    color: theme.colorScheme.primary
+                                        .opaque(0.15, iReallyMeanIt: true),
+                                  ),
+                                ),
+                                child: Icon(Iconsax.people,
+                                    size: 18,
+                                    color: theme.colorScheme.primary),
+                              ),
+                              const SizedBox(width: 10),
+                              const AnymeXText('Active Rooms',
+                                size: 15,
+                                variant: TextVariant.semiBold,
+                              ),
+                              const SizedBox(width: 8),
+                              Obx(() {
+                                final count = _watchium.publicRooms.length;
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        theme.colorScheme.primaryContainer,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: AnymeXText('$count',
+                                    size: 12,
+                                    color: theme
+                                        .colorScheme.onPrimaryContainer,
+                                  ),
+                                );
+                              }),
+                            ],
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 14, bottom: 14),
+                            child: Divider(
+                              height: 1,
+                              thickness: 0.6,
+                              color: theme.colorScheme.outline
+                                  .opaque(0.08, iReallyMeanIt: true),
                             ),
-                            child: AnymeXText('$count',
-                              size: 12,
-                              color: theme.colorScheme.onPrimaryContainer,
-                            ),
-                          );
-                        }),
-                      ],
+                          ),
+                          _buildRoomsList(theme),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 12),
-                    _buildRoomsList(theme),
                   ],
                 ),
               ),
@@ -214,15 +258,8 @@ class _WatchiumPageState extends State<WatchiumPage> {
 
   Widget _buildJoinByCodeSection(ThemeData theme) {
     final cs = theme.colorScheme;
-    return Container(
+    return AnymeXCard(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainer,
-        borderRadius: BorderRadius.circular(16.multiplyRadius()),
-        border: Border.all(
-          color: cs.outline.opaque(0.1, iReallyMeanIt: true),
-        ),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -267,56 +304,109 @@ class _WatchiumPageState extends State<WatchiumPage> {
               color: cs.outline.opaque(0.08, iReallyMeanIt: true),
             ),
           ),
-          TextField(
-            controller: _joinCodeController,
-            onChanged: (v) => setState(() => _error = null),
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 14,
-              color: cs.onSurface,
-              letterSpacing: 2,
-            ),
-            decoration: InputDecoration(
-              labelText: 'Room Code',
-              hintText: 'e.g. ABC123',
-              labelStyle: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 13,
-                color: cs.onSurfaceVariant,
-              ),
-              hintStyle: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 13,
-                letterSpacing: 2,
-                color: cs.onSurface.opaque(0.35, iReallyMeanIt: true),
-              ),
-              prefixIcon: Icon(Icons.vpn_key_rounded,
-                  size: 18, color: cs.onSurface.opaque(0.5, iReallyMeanIt: true)),
-              filled: true,
-              fillColor: cs.surfaceContainerLow,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.multiplyRadius()),
-                borderSide: BorderSide.none,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.multiplyRadius()),
-                borderSide: BorderSide(
-                  color: cs.outlineVariant.opaque(0.6, iReallyMeanIt: true),
+          GestureDetector(
+            onTap: () {
+              if (!_codeFocusNode.hasFocus) _codeFocusNode.requestFocus();
+            },
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final code = _joinCodeController.text.toUpperCase();
+                    final hasError = _error != null;
+                    final isFocused = _codeFocusNode.hasFocus;
+                    const gap = 8.0;
+                    const maxBoxSize = 48.0;
+                    double availableWidth = constraints.maxWidth;
+                    double boxSize = (availableWidth - gap * 5) / 6;
+                    boxSize = boxSize.clamp(36.0, maxBoxSize);
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(6, (i) {
+                        final char = i < code.length ? code[i] : '';
+                        final hasChar = char.isNotEmpty;
+                        final isNext = i == code.length && isFocused;
+                        Color borderColor;
+                        Color boxColor;
+                        double borderWidth = 1;
+                        if (hasError) {
+                          borderColor = cs.error.opaque(0.6, iReallyMeanIt: true);
+                          boxColor = hasChar
+                              ? cs.errorContainer
+                                  .opaque(0.35, iReallyMeanIt: true)
+                              : cs.surfaceContainerLow;
+                          if (isNext) borderWidth = 1.4;
+                        } else if (isNext) {
+                          borderColor = cs.primary;
+                          borderWidth = 1.4;
+                          boxColor = cs.surfaceContainerLow;
+                        } else if (hasChar) {
+                          borderColor =
+                              cs.primary.opaque(0.55, iReallyMeanIt: true);
+                          borderWidth = 1.2;
+                          boxColor = cs.primaryContainer
+                              .opaque(0.35, iReallyMeanIt: true);
+                        } else {
+                          borderColor = cs.outlineVariant
+                              .opaque(0.6, iReallyMeanIt: true);
+                          boxColor = cs.surfaceContainerLow;
+                        }
+                        return Container(
+                          width: boxSize,
+                          height: boxSize,
+                          margin: EdgeInsets.only(right: i < 5 ? gap : 0),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: boxColor,
+                            borderRadius:
+                                BorderRadius.circular(12.multiplyRadius()),
+                            border: Border.all(
+                                color: borderColor, width: borderWidth),
+                          ),
+                          child: AnymeXText(
+                            char,
+                            size: 18,
+                            variant: TextVariant.semiBold,
+                            color: hasChar && !hasError
+                                ? cs.onPrimaryContainer
+                                : hasError && hasChar
+                                    ? cs.onErrorContainer
+                                    : cs.onSurface,
+                          ),
+                        );
+                      }),
+                    );
+                  },
                 ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.multiplyRadius()),
-                borderSide: BorderSide(color: cs.primary, width: 1.4),
-              ),
+                Positioned.fill(
+                  child: Opacity(
+                    opacity: 0,
+                    child: TextField(
+                      controller: _joinCodeController,
+                      focusNode: _codeFocusNode,
+                      onChanged: (v) => setState(() => _error = null),
+                      textCapitalization: TextCapitalization.characters,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[A-Z0-9]')),
+                        LengthLimitingTextInputFormatter(6),
+                      ],
+                      onSubmitted: (_) => _joinByCode(),
+                      showCursor: false,
+                      enableInteractiveSelection: false,
+                      style: const TextStyle(
+                          color: Colors.transparent, fontSize: 1),
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        counterText: '',
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      cursorColor: Colors.transparent,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            textCapitalization: TextCapitalization.characters,
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[A-Z0-9]')),
-              LengthLimitingTextInputFormatter(6),
-            ],
-            onSubmitted: (_) => _joinByCode(),
           ),
           const SizedBox(height: 12),
           SizedBox(
