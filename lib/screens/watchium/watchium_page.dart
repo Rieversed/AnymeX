@@ -213,74 +213,164 @@ class _WatchiumPageState extends State<WatchiumPage> {
   }
 
   Widget _buildJoinByCodeSection(ThemeData theme) {
+    final cs = theme.colorScheme;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(16),
+        color: cs.surfaceContainer,
+        borderRadius: BorderRadius.circular(16.multiplyRadius()),
         border: Border.all(
-          color: theme.colorScheme.outline.opaque(0.1),
+          color: cs.outline.opaque(0.1, iReallyMeanIt: true),
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const AnymeXText('Join with Code',
-            size: 14,
-            variant: TextVariant.semiBold,
-          ),
-          const SizedBox(height: 8),
-          AnymeXText('Enter a 6-character room code to join a watch party',
-            size: 12,
-            color: theme.colorScheme.onSurface.opaque(0.6),
-          ),
-          const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(
-                child: TextField(
-                  controller: _joinCodeController,
-                  onChanged: (v) => setState(() => _error = null),
-                  decoration: InputDecoration(
-                    hintText: 'ABC123',
-                    hintStyle: TextStyle(
-                      letterSpacing: 4,
-                      color: theme.colorScheme.onSurface.opaque(0.3),
-                    ),
-                    prefixIcon: const Icon(Icons.vpn_key),
-                    border: const OutlineInputBorder(),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 14),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: cs.primaryContainer.opaque(0.35, iReallyMeanIt: true),
+                  borderRadius: BorderRadius.circular(12.multiplyRadius()),
+                  border: Border.all(
+                    color: cs.primary.opaque(0.15, iReallyMeanIt: true),
                   ),
-                  textCapitalization: TextCapitalization.characters,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[A-Z0-9]')),
-                    LengthLimitingTextInputFormatter(6),
-                  ],
-                  onSubmitted: (_) => _joinByCode(),
                 ),
+                child: Icon(Icons.vpn_key_rounded, size: 20, color: cs.primary),
               ),
               const SizedBox(width: 12),
-              FilledButton(
-                onPressed: _isLoading ? null : _joinByCode,
-                child: _isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const AnymeXText('Join'),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const AnymeXText('Join with Code',
+                      size: 15,
+                      variant: TextVariant.semiBold,
+                    ),
+                    const SizedBox(height: 2),
+                    AnymeXText(
+                      'Enter a 6-character room code to join a watch party',
+                      size: 12,
+                      color: cs.onSurface.opaque(0.6),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
+          Padding(
+            padding: const EdgeInsets.only(top: 14, bottom: 14),
+            child: Divider(
+              height: 1,
+              thickness: 0.6,
+              color: cs.outline.opaque(0.08, iReallyMeanIt: true),
+            ),
+          ),
+          TextField(
+            controller: _joinCodeController,
+            onChanged: (v) => setState(() => _error = null),
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 14,
+              color: cs.onSurface,
+              letterSpacing: 2,
+            ),
+            decoration: InputDecoration(
+              labelText: 'Room Code',
+              hintText: 'e.g. ABC123',
+              labelStyle: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 13,
+                color: cs.onSurfaceVariant,
+              ),
+              hintStyle: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 13,
+                letterSpacing: 2,
+                color: cs.onSurface.opaque(0.35, iReallyMeanIt: true),
+              ),
+              prefixIcon: Icon(Icons.vpn_key_rounded,
+                  size: 18, color: cs.onSurface.opaque(0.5, iReallyMeanIt: true)),
+              filled: true,
+              fillColor: cs.surfaceContainerLow,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.multiplyRadius()),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.multiplyRadius()),
+                borderSide: BorderSide(
+                  color: cs.outlineVariant.opaque(0.6, iReallyMeanIt: true),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.multiplyRadius()),
+                borderSide: BorderSide(color: cs.primary, width: 1.4),
+              ),
+            ),
+            textCapitalization: TextCapitalization.characters,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[A-Z0-9]')),
+              LengthLimitingTextInputFormatter(6),
+            ],
+            onSubmitted: (_) => _joinByCode(),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _isLoading ? null : _joinByCode,
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.multiplyRadius()),
+                ),
+                backgroundColor: cs.primary,
+                foregroundColor: cs.onPrimary,
+              ),
+              icon: _isLoading
+                  ? SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.2,
+                        color: cs.onPrimary,
+                      ),
+                    )
+                  : const Icon(Icons.login_rounded, size: 18),
+              label: AnymeXText(
+                _isLoading ? 'Joining...' : 'Join Room',
+                variant: TextVariant.semiBold,
+                size: 14,
+                color: cs.onPrimary,
+              ),
+            ),
+          ),
           if (_error != null) ...[
-            const SizedBox(height: 8),
-            AnymeXText(
-              _error!,
-              style: TextStyle(color: theme.colorScheme.error, fontSize: 12),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: cs.error.opaque(0.1, iReallyMeanIt: true),
+                borderRadius: BorderRadius.circular(10.multiplyRadius()),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline_rounded, size: 16, color: cs.error),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: AnymeXText(
+                      _error!,
+                      size: 12,
+                      color: cs.error,
+                      maxLines: 3,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ],
