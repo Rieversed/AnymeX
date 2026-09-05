@@ -61,6 +61,10 @@ class _WatchiumPageState extends State<WatchiumPage> {
 
 
   Future<void> _joinByCode({String? password}) async {
+    if (_isLoading || _watchium.isJoining.value) {
+      Logger.d('Join by code skipped: already in progress', 'WATCHIUM_UI');
+      return;
+    }
     final code = _joinCodeController.text.trim().toUpperCase();
     Logger.i('Join by code: $code', 'WATCHIUM_UI');
     if (code.length != 6) {
@@ -69,90 +73,321 @@ class _WatchiumPageState extends State<WatchiumPage> {
       return;
     }
 
+    final suppliedPassword = password?.trim() ?? '';
+    if (suppliedPassword.isNotEmpty) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+      bool ok = false;
+      try {
+        ok = await _watchium.joinRoom(code, password: suppliedPassword);
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
+      if (ok) {
+        Logger.i('Join by code $code succeeded (with password)', 'WATCHIUM_UI');
+        if (mounted) _handleJoinSuccess(code);
+      } else if (mounted) {
+        final err = _watchium.error.value;
+        Logger.w('Join by code $code failed (with password): $err',
+            'WATCHIUM_UI');
+        if (err == 'Incorrect password') {
+          _showPasswordDialog(code, initialError: err);
+        } else {
+          setState(() => _error = err);
+          errorSnackBar(err.isEmpty ? 'Failed to join room' : err);
+        }
+      }
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
-    final ok = await _watchium.joinRoom(code, password: password);
-    if (mounted) setState(() => _isLoading = false);
+    WatchiumRoomState? preview;
+    try {
+      preview = await _watchium.getRoomInfo(code);
+    } catch (e) {
+      Logger.w('Resolve room $code failed: $e', 'WATCHIUM_UI');
+      preview = null;
+    }
+    if (!mounted) return;
+
+    if (preview == null) {
+      Logger.w('Resolve room $code: not found', 'WATCHIUM_UI');
+      setState(() {
+        _isLoading = false;
+        _error = 'Room not found or expired';
+      });
+      errorSnackBar('Room not found or expired');
+      return;
+    }
+
+    if (preview.hasPassword) {
+      Logger.i('Room $code requires a password, showing password UI',
+          'WATCHIUM_UI');
+      setState(() => _isLoading = false);
+      _showPasswordDialog(code);
+      return;
+    }
+
+    bool ok = false;
+    try {
+      ok = await _watchium.joinRoom(code);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
 
     if (ok) {
       Logger.i('Join by code $code succeeded', 'WATCHIUM_UI');
-      if (mounted) {
-        snackBar('Joined room!');
-        final roomState = _watchium.roomState.value;
-        final content = roomState?.content;
-        if (content != null && content.availableServers.isNotEmpty) {
-          showWatchiumServerSheet(context: context, content: content);
-        }
-      }
-    } else {
+      if (mounted) _handleJoinSuccess(code);
+    } else if (mounted) {
       final err = _watchium.error.value;
       Logger.w('Join by code $code failed: $err', 'WATCHIUM_UI');
-      // If password incorrect, show password dialog
-      if (err == 'Incorrect password' && mounted) {
+      if (err == 'Incorrect password') {
         _showPasswordDialog(code);
         return;
       }
-      if (mounted) {
-        setState(() => _error = err);
-        errorSnackBar(err.isEmpty ? 'Failed to join room' : err);
-      }
+      setState(() => _error = err);
+      errorSnackBar(err.isEmpty ? 'Failed to join room' : err);
     }
   }
 
-  void _showPasswordDialog(String code) {
+  void _handleJoinSuccess(String code) {
+    snackBar('Joined room $code!');
+    final roomState = _watchium.roomState.value;
+    final content = roomState?.content;
+    if (content != null && content.availableServers.isNotEmpty) {
+      showWatchiumServerSheet(context: context, content: content);
+    }
+  }
+
+  void _showPasswordDialog(String code, {String? initialError}) {
     final pwController = TextEditingController();
+    bool obscure = true;
+    bool joining = false;
+    String? dialogError = initialError;
+
     Get.dialog(
       Dialog(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.lock, size: 40),
-              const SizedBox(height: 12),
-              const AnymeXText('This room requires a password',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 16),
-              TextField(
-                controller: pwController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Password',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.lock_outline),
-                ),
-                onSubmitted: (v) {
-                  Get.back();
-                  _joinByCode(password: v);
-                },
-              ),
-              const SizedBox(height: 12),
-              Row(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: StatefulBuilder(
+          builder: (context, setDialogState) {
+            final cs = Theme.of(context).colorScheme;
+            Future<void> submit() async {
+              if (joining || _watchium.isJoining.value) return;
+              final pw = pwController.text.trim();
+              if (pw.isEmpty) {
+                setDialogState(() =>
+                    dialogError = 'Please enter the room password');
+                return;
+              }
+              setDialogState(() {
+                joining = true;
+                dialogError = null;
+              });
+              final ok =
+                  await _watchium.joinRoom(code, password: pw);
+              if (Get.isDialogOpen != true) {
+                return;
+              }
+              if (ok) {
+                Logger.i('Join room $code succeeded (dialog password)',
+                    'WATCHIUM_UI');
+                Get.back();
+                _handleJoinSuccess(code);
+              } else {
+                final err = _watchium.error.value;
+                Logger.w('Join room $code failed (dialog password): $err',
+                    'WATCHIUM_UI');
+                setDialogState(() {
+                  joining = false;
+                  dialogError = err.isEmpty ? 'Failed to join room' : err;
+                });
+              }
+            }
+
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: TextButton(
-                      onPressed: () => Get.back(),
-                      child: const AnymeXText('Cancel'),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: cs.primaryContainer.opaque(0.35,
+                              iReallyMeanIt: true),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: cs.primary.opaque(0.15, iReallyMeanIt: true),
+                          ),
+                        ),
+                        child: Icon(Icons.lock_rounded,
+                            size: 20, color: cs.primary),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const AnymeXText(
+                              'Password Required',
+                              variant: TextVariant.semiBold,
+                              size: 15,
+                            ),
+                            const SizedBox(height: 2),
+                            AnymeXText(
+                              'Room $code is private',
+                              size: 12,
+                              color: cs.onSurface.opaque(0.6),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed:
+                            joining ? null : () => Get.back(),
+                        icon: Icon(Icons.close_rounded,
+                            color: cs.onSurface.opaque(0.5)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: pwController,
+                    obscureText: obscure,
+                    enabled: !joining,
+                    autofocus: true,
+                    onSubmitted: (_) => submit(),
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 14,
+                      color: cs.onSurface,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: 'Room password',
+                      hintText: 'Enter the room password',
+                      labelStyle: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                        color: cs.onSurfaceVariant,
+                      ),
+                      hintStyle: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                        color: cs.onSurface.opaque(0.35),
+                      ),
+                      prefixIcon: Icon(Icons.lock_outline_rounded,
+                          size: 18, color: cs.onSurface.opaque(0.5)),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscure
+                              ? Icons.visibility_off_rounded
+                              : Icons.visibility_rounded,
+                          size: 18,
+                          color: cs.onSurface.opaque(0.5),
+                        ),
+                        onPressed: () => setDialogState(
+                            () => obscure = !obscure),
+                      ),
+                      filled: true,
+                      fillColor: cs.surfaceContainerLow,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 14),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: cs.outlineVariant),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: cs.primary, width: 1.5),
+                      ),
                     ),
                   ),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: () {
-                        Get.back();
-                        _joinByCode(password: pwController.text);
-                      },
-                      child: const AnymeXText('Join'),
+                  if (dialogError != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: cs.error.opaque(0.1, iReallyMeanIt: true),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.error_outline_rounded,
+                              size: 16, color: cs.error),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: AnymeXText(
+                              dialogError!,
+                              size: 12,
+                              color: cs.error,
+                              maxLines: 3,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+                  ],
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed:
+                              joining ? null : () => Get.back(),
+                          child: const AnymeXText('Cancel'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: joining ? null : submit,
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          icon: joining
+                              ? SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: cs.onPrimary,
+                                  ),
+                                )
+                              : const Icon(Icons.login_rounded, size: 18),
+                          label: AnymeXText(
+                            joining ? 'Joining...' : 'Join',
+                            variant: TextVariant.semiBold,
+                            size: 14,
+                            color: cs.onPrimary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
+      barrierDismissible: true,
     );
   }
 
@@ -727,21 +962,52 @@ class _WatchiumPageState extends State<WatchiumPage> {
 
   Future<void> _joinRoomFromCard(WatchiumRoomState room) async {
     Logger.i('Join room from card: ${room.code}', 'WATCHIUM_UI');
+    if (_isLoading || _watchium.isJoining.value) {
+      Logger.d('Join room from card skipped: already in progress',
+          'WATCHIUM_UI');
+      return;
+    }
+    final code = room.code.trim().toUpperCase();
+    if (room.hasPassword) {
+      Logger.i('Room $code requires a password (from list), showing UI',
+          'WATCHIUM_UI');
+      _showPasswordDialog(code);
+      return;
+    }
     setState(() => _isLoading = true);
-    final ok = await _watchium.joinRoom(room.code);
-    if (mounted) setState(() => _isLoading = false);
+    WatchiumRoomState? preview;
+    try {
+      preview = await _watchium.getRoomInfo(code);
+    } catch (e) {
+      Logger.w('Resolve room $code failed: $e', 'WATCHIUM_UI');
+      preview = null;
+    }
+    if (!mounted) return;
+    if (preview == null) {
+      setState(() => _isLoading = false);
+      errorSnackBar('Room not found or expired');
+      return;
+    }
+    if (preview.hasPassword) {
+      setState(() => _isLoading = false);
+      _showPasswordDialog(code);
+      return;
+    }
+    bool ok = false;
+    try {
+      ok = await _watchium.joinRoom(code);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
     if (ok) {
-      snackBar('Joined room ${room.code}!');
-      final rs = _watchium.roomState.value;
-      final c = rs?.content;
-      if (c != null && c.availableServers.isNotEmpty && mounted) {
-        showWatchiumServerSheet(context: context, content: c);
+      _handleJoinSuccess(code);
+    } else if (mounted) {
+      final err = _watchium.error.value;
+      if (err == 'Incorrect password') {
+        _showPasswordDialog(code);
+        return;
       }
-    } else {
-      errorSnackBar(
-          _watchium.error.value.isEmpty
-              ? 'Failed to join room'
-              : _watchium.error.value);
+      errorSnackBar(err.isEmpty ? 'Failed to join room' : err);
     }
   }
 
