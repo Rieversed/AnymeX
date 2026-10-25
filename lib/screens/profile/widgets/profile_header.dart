@@ -21,6 +21,7 @@ import 'package:anymex/widgets/anymex_widgets/anymex_decorated_avatar.dart';
 import 'package:anymex/screens/profile/compatibility/compatibility_input_page.dart';
 import 'package:anymex/screens/anime/widgets/comments/widgets/leaderboard_sheet.dart';
 import 'package:anymex/widgets/anymex_widgets/linked_accounts_badges.dart';
+import 'package:anymex/screens/profile/widgets/linked_accounts_sheet.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 Widget _buildBottomSheetOption(
@@ -413,7 +414,6 @@ class DesktopProfileHeader extends StatelessWidget {
                                         }
                                         return LinkedAccountsBadges(
                                           linkedAccounts: linked,
-                                          fontSize: 10,
                                         );
                                       }),
                                   ],
@@ -500,6 +500,20 @@ class DesktopProfileHeader extends StatelessWidget {
                                               Navigator.pop(ctx);
                                               launchUrlString(
                                                 'https://anilist.co/user/$name',
+                                              );
+                                            },
+                                          ),
+                                          _buildBottomSheetOption(
+                                            ctx,
+                                            icon: Icons.link_rounded,
+                                            label: 'Linked Accounts',
+                                            onTap: () {
+                                              Navigator.pop(ctx);
+                                              LinkedAccountsSheet.show(
+                                                context,
+                                                linkedAccounts: commentum
+                                                    ?.currentUserLinkedAccounts
+                                                    .value,
                                               );
                                             },
                                           ),
@@ -732,6 +746,19 @@ class MobileProfileHeaderSliver extends StatelessWidget {
                           onTap: () {
                             Navigator.pop(ctx);
                             launchUrlString('https://anilist.co/user/$name');
+                          },
+                        ),
+                        _buildBottomSheetOption(
+                          ctx,
+                          icon: Icons.link_rounded,
+                          label: 'Linked Accounts',
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            LinkedAccountsSheet.show(
+                              context,
+                              linkedAccounts:
+                                  commentum?.currentUserLinkedAccounts.value,
+                            );
                           },
                         ),
                         _buildBottomSheetOption(
@@ -1048,7 +1075,6 @@ class MobileProfileHeaderSliver extends StatelessWidget {
                                   }
                                   return LinkedAccountsBadges(
                                     linkedAccounts: linked,
-                                    fontSize: 10,
                                   );
                                 }),
                             ],

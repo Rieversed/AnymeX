@@ -441,7 +441,6 @@ class _UserCommentsSheetContentState extends State<_UserCommentsSheetContent> {
           const SizedBox(width: 8),
           LinkedAccountsBadges(
             linkedAccounts: comment.linkedAccounts,
-            fontSize: 9.0,
           ),
         ],
       ],

@@ -2954,7 +2954,6 @@ class _CommentSectionState extends State<CommentSection> {
                               const SizedBox(width: 6),
                               LinkedAccountsBadges(
                                 linkedAccounts: comment.linkedAccounts,
-                                fontSize: 9.5,
                               ),
                             ],
                           ],

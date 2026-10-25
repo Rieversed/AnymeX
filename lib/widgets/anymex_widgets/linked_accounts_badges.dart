@@ -3,7 +3,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 class LinkedAccountsBadges extends StatelessWidget {
   final Map<String, dynamic>? linkedAccounts;
-  final double fontSize;
   final double iconSize;
   final bool interactive;
   final String? excludeService;
@@ -11,8 +10,7 @@ class LinkedAccountsBadges extends StatelessWidget {
   const LinkedAccountsBadges({
     super.key,
     required this.linkedAccounts,
-    this.fontSize = 9.0,
-    this.iconSize = 12.0,
+    this.iconSize = 14.0,
     this.interactive = true,
     this.excludeService,
   });
@@ -27,7 +25,8 @@ class LinkedAccountsBadges extends StatelessWidget {
     final mal = linkedAccounts!['mal'];
     final simkl = linkedAccounts!['simkl'];
 
-    final anilistUsername = anilist is Map ? anilist['username']?.toString() : null;
+    final anilistUsername =
+        anilist is Map ? anilist['username']?.toString() : null;
     final malUsername = mal is Map ? mal['username']?.toString() : null;
     final simklUsername = simkl is Map ? simkl['username']?.toString() : null;
 
@@ -35,34 +34,44 @@ class LinkedAccountsBadges extends StatelessWidget {
 
     final badges = <Widget>[];
 
-    if (normExclude != 'anilist' && anilistUsername != null && anilistUsername.isNotEmpty) {
+    if (normExclude != 'anilist' &&
+        anilistUsername != null &&
+        anilistUsername.isNotEmpty) {
       badges.add(_buildBadge(
         label: 'AL',
+        iconAsset: 'assets/images/anilist-icon.png',
         username: anilistUsername,
         bgColor: const Color(0xFF02A9FF).withOpacity(0.18),
-        textColor: const Color(0xFF02A9FF),
+        iconColor: const Color(0xFF02A9FF),
         borderColor: const Color(0xFF02A9FF).withOpacity(0.4),
         url: 'https://anilist.co/user/$anilistUsername',
       ));
     }
 
-    if (normExclude != 'mal' && normExclude != 'myanimelist' && malUsername != null && malUsername.isNotEmpty) {
+    if (normExclude != 'mal' &&
+        normExclude != 'myanimelist' &&
+        malUsername != null &&
+        malUsername.isNotEmpty) {
       badges.add(_buildBadge(
         label: 'MAL',
+        iconAsset: 'assets/images/mal-icon.png',
         username: malUsername,
         bgColor: const Color(0xFF2E51A2).withOpacity(0.18),
-        textColor: const Color(0xFF4C75D6),
+        iconColor: const Color(0xFF4C75D6),
         borderColor: const Color(0xFF2E51A2).withOpacity(0.4),
         url: 'https://myanimelist.net/profile/$malUsername',
       ));
     }
 
-    if (normExclude != 'simkl' && simklUsername != null && simklUsername.isNotEmpty) {
+    if (normExclude != 'simkl' &&
+        simklUsername != null &&
+        simklUsername.isNotEmpty) {
       badges.add(_buildBadge(
         label: 'SIMKL',
+        iconAsset: 'assets/images/simkl-icon.png',
         username: simklUsername,
         bgColor: const Color(0xFFE5A00D).withOpacity(0.18),
-        textColor: const Color(0xFFFFAE19),
+        iconColor: const Color(0xFFFFAE19),
         borderColor: const Color(0xFFE5A00D).withOpacity(0.4),
         url: 'https://simkl.com/$simklUsername',
       ));
@@ -82,27 +91,28 @@ class LinkedAccountsBadges extends StatelessWidget {
 
   Widget _buildBadge({
     required String label,
+    required String iconAsset,
     required String username,
     required Color bgColor,
-    required Color textColor,
+    required Color iconColor,
     required Color borderColor,
     required String url,
   }) {
     final badge = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2.5),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(4),
         border: Border.all(color: borderColor, width: 0.8),
       ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: textColor,
-          fontSize: fontSize,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.3,
-        ),
+      child: Image.asset(
+        iconAsset,
+        width: iconSize,
+        height: iconSize,
+        fit: BoxFit.contain,
+        color: iconColor,
+        colorBlendMode: BlendMode.srcIn,
+        filterQuality: FilterQuality.high,
       ),
     );
 

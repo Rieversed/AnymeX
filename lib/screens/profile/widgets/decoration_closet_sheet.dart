@@ -496,7 +496,6 @@ class _DecorationClosetSheetState extends State<DecorationClosetSheet>
                             _commentumService.currentUserLinkedAccounts.value;
                         return LinkedAccountsBadges(
                           linkedAccounts: linked,
-                          fontSize: 10,
                           interactive: false,
                         );
                       }),

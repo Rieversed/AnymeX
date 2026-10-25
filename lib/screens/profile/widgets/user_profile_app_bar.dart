@@ -17,6 +17,7 @@ import 'package:anymex/utils/function.dart';
 import 'package:anymex/widgets/anymex_widgets/anymex_decorated_avatar.dart';
 import 'package:anymex/database/comments/model/user_points.dart';
 import 'package:anymex/widgets/anymex_widgets/linked_accounts_badges.dart';
+import 'package:anymex/screens/profile/widgets/linked_accounts_sheet.dart';
 import 'package:anymex/services/commentum_service.dart';
 import 'package:anymex/screens/anime/widgets/comments/widgets/leaderboard_sheet.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -170,6 +171,18 @@ class _UserProfileAppBarState extends State<UserProfileAppBar> {
                           onTap: () {
                             Navigator.pop(ctx);
                             launchUrlString('https://anilist.co/user/$name');
+                          },
+                        ),
+                        buildProfileSheetOption(
+                          ctx,
+                          icon: Icons.link_rounded,
+                          label: 'Linked Accounts',
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            LinkedAccountsSheet.show(
+                              context,
+                              linkedAccounts: widget.linkedAccounts,
+                            );
                           },
                         ),
                         buildProfileSheetOption(
@@ -553,7 +566,6 @@ class _UserProfileAppBarState extends State<UserProfileAppBar> {
                                   widget.linkedAccounts!.isNotEmpty)
                                 LinkedAccountsBadges(
                                   linkedAccounts: widget.linkedAccounts!,
-                                  fontSize: 10,
                                 ),
                               if (user.createdAt != null)
                                 Container(
