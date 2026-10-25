@@ -564,15 +564,6 @@ class DesktopProfileHeader extends StatelessWidget {
                                                   const CompatibilityInputPage());
                                             },
                                           ),
-                                          _buildBottomSheetOption(
-                                            ctx,
-                                            icon: Icons.emoji_events_outlined,
-                                            label: 'Community Leaderboard',
-                                            onTap: () {
-                                              Navigator.pop(ctx);
-                                              LeaderboardSheet.show(context);
-                                            },
-                                          ),
                                         ],
                                       ),
                                     ),
@@ -697,18 +688,6 @@ class MobileProfileHeaderSliver extends StatelessWidget {
             shape: BoxShape.circle,
           ),
           child: IconButton(
-            icon: const Icon(Icons.emoji_events_outlined),
-            tooltip: 'Leaderboard',
-            onPressed: () => LeaderboardSheet.show(context),
-          ),
-        ),
-        Container(
-          margin: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: context.theme.colorScheme.surface.withOpacity(0.5),
-            shape: BoxShape.circle,
-          ),
-          child: IconButton(
             icon: const Icon(Icons.more_vert),
             onPressed: () {
               showModalBottomSheet(
@@ -746,16 +725,6 @@ class MobileProfileHeaderSliver extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        if (commentum != null)
-                          _buildBottomSheetOption(
-                            ctx,
-                            icon: Icons.checkroom_rounded,
-                            label: 'Decoration Closet',
-                            onTap: () {
-                              Navigator.pop(ctx);
-                              DecorationClosetSheet.show(context);
-                            },
-                          ),
                         _buildBottomSheetOption(
                           ctx,
                           icon: Icons.north_east_rounded,
@@ -813,15 +782,6 @@ class MobileProfileHeaderSliver extends StatelessWidget {
                           onTap: () {
                             Navigator.pop(ctx);
                             navigate(() => const CompatibilityInputPage());
-                          },
-                        ),
-                        _buildBottomSheetOption(
-                          ctx,
-                          icon: Icons.emoji_events_outlined,
-                          label: 'Community Leaderboard',
-                          onTap: () {
-                            Navigator.pop(ctx);
-                            LeaderboardSheet.show(context);
                           },
                         ),
                       ],

@@ -217,15 +217,6 @@ class _UserProfileAppBarState extends State<UserProfileAppBar> {
                             ));
                           },
                         ),
-                        buildProfileSheetOption(
-                          ctx,
-                          icon: Icons.emoji_events_outlined,
-                          label: 'Community Leaderboard',
-                          onTap: () {
-                            Navigator.pop(ctx);
-                            LeaderboardSheet.show(context);
-                          },
-                        ),
                       ],
                     ),
                   ),
