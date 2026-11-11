@@ -45,9 +45,9 @@ import 'package:anymex/services/fcm_service.dart'
 import 'package:anymex/services/commentum_service.dart';
 import 'package:anymex/controllers/watchium/watchium_service.dart';
 import 'package:anymex/utils/logger.dart';
-import 'package:anymex/screens/notifications/notification_screen.dart';
-import 'package:anymex/screens/notifications/notification_controller.dart';
 import 'package:anymex/utils/notification.dart';
+import 'package:anymex/services/anilist_notification_service.dart';
+import 'package:anymex/screens/notifications/notification_controller.dart';
 import 'package:anymex/utils/deeplink.dart';
 import 'package:anymex/utils/external_font_loader.dart';
 import 'package:anymex/utils/register_protocol/register_protocol.dart';
@@ -68,7 +68,6 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:get/get.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:flutter_iconly/flutter_iconly.dart';
@@ -79,7 +78,6 @@ import 'package:media_kit/media_kit.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 
-WebViewEnvironment? webViewEnvironment;
 late Isar isar;
 final appLinks = AppLinks();
 
@@ -101,6 +99,15 @@ class MyCustomScrollBehavior extends MaterialScrollBehavior {
         PointerDeviceKind.trackpad,
         PointerDeviceKind.stylus
       };
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) =>
+      const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics());
+
+  @override
+  Widget buildOverscrollIndicator(
+          BuildContext context, Widget child, ScrollableDetails details) =>
+      child;
 }
 
 void initDeepLinkListener(List<String> args) async {
@@ -157,19 +164,6 @@ Future<void> safeCall(FutureOr<void> Function() function,
 void main(List<String> args) async {
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
-
-    await safeCall(() async {
-      if (!Platform.isLinux) {
-        if (Platform.isWindows) {
-          webViewEnvironment = await WebViewEnvironment.create();
-        }
-        if (Platform.isAndroid || Platform.isIOS) {
-          await InAppWebViewController.setWebContentsDebuggingEnabled(
-            !const bool.fromEnvironment('dart.vm.product'),
-          );
-        }
-      }
-    }, errorMessage: 'Failed to initialize WebViewEnvironment');
 
     await safeCall(() => ExternalFontLoader.loadAllFonts(),
         errorMessage: 'Failed to load external fonts');
@@ -285,7 +279,9 @@ void _initializeGetxController() async {
     Get.put(WatchiumService(), permanent: true);
     Get.put(GistSyncController(), permanent: true);
     Get.put(DownloadController(), permanent: true);
-    Get.lazyPut(() => NotificationService());
+    Get.put(NotificationService(), permanent: true);
+    Get.put(AnilistNotificationService(), permanent: true);
+    Get.put(NotificationController(), permanent: true);
     Get.put(StatsTracker());
     Get.lazyPut(() => CacheController());
     Get.lazyPut(() => MediaModeController());
@@ -414,10 +410,7 @@ class _MainAppState extends State<MainApp> {
                   top: 0,
                   left: 0,
                   right: 0,
-                  child: Container(
-                    color: Colors.transparent,
-                    child: AnymeXTitleBar.titleBar(),
-                  ),
+                  child: AnymeXTitleBar.titleBar(),
                 ),
                 // const FpsMeter(),
               ],
@@ -656,10 +649,10 @@ class _FilterScreenState extends State<FilterScreen> {
     return AnymeXScaffold(
         resizeToAvoidBottomInset: false,
         body: PlatformBuilder(
-      strictMode: false,
-      desktopBuilder: _buildDesktopLayout(context, authService),
-      androidBuilder: _buildAndroidLayout(authService),
-    ));
+          strictMode: false,
+          desktopBuilder: _buildDesktopLayout(context, authService),
+          androidBuilder: _buildAndroidLayout(authService),
+        ));
   }
 
   Widget _buildDesktopLayout(BuildContext context, ServiceHandler authService) {
@@ -701,6 +694,21 @@ class _FilterScreenState extends State<FilterScreen> {
                               final count = Get.find<SourceController>()
                                   .extensionUpdatesCount
                                   .value;
+                              int unread = 0;
+                              try {
+                                if (Get.isRegistered<AnilistAuth>()) {
+                                  unread += Get.find<AnilistAuth>()
+                                      .unreadAnilistCount
+                                      .value;
+                                }
+                              } catch (_) {}
+                              try {
+                                if (Get.isRegistered<CommentumService>()) {
+                                  unread += Get.find<CommentumService>()
+                                      .unreadNotificationCount
+                                      .value;
+                                }
+                              } catch (_) {}
                               final avatar = CircleAvatar(
                                   radius: 24,
                                   backgroundColor: Theme.of(context)
@@ -721,6 +729,16 @@ class _FilterScreenState extends State<FilterScreen> {
                                                   ''),
                                         )
                                       : const Icon((IconlyBold.profile)));
+                              if (unread > 0) {
+                                return AnymeXBadge(
+                                  label: unread > 99 ? '99+' : '$unread',
+                                  backgroundColor:
+                                      Theme.of(context).colorScheme.error,
+                                  textColor: Colors.white,
+                                  offset: const Offset(0, 0),
+                                  child: avatar,
+                                );
+                              }
                               if (count > 0) {
                                 return AnymeXBadge(
                                   label: count.toString(),

@@ -37,6 +37,8 @@ enum General {
   showHomeContinueWatching,
   incognitoMode,
   dontShowDonationDialog,
+  hasShownHomeDonationDialog,
+  watchedAdsCount,
 }
 
 enum ThemeKeys {
@@ -306,6 +308,16 @@ enum UISettingsKeys {
   appFontFamily,
   bottomNavBarMargin,
   useLegacyNavbar,
+  useComputedBlur,
+  fullScreenBlur,
+  tintBlur,
+  usePosterForBlur,
+  detailsBlurAmount,
+  detailsBackdropBrightness,
+  detailsFadeAdjuster,
+  detailsBlurStyle,
+  detailsBlurScope,
+  customCardStyleJson,
 }
 
 enum DownloadKeys {

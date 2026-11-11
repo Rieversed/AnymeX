@@ -19,7 +19,9 @@ import 'package:anymex/database/isar_models/episode.dart';
 import 'package:anymex/database/isar_models/offline_media.dart';
 import 'package:anymex/models/Anilist/anilist_media_user.dart';
 import 'package:anymex/models/Media/media.dart';
+import 'package:anymex/models/animethemes/anime_theme.dart';
 import 'package:anymex/screens/anime/widgets/comments/controller/comment_preloader.dart';
+import 'package:anymex/utils/anime_themes_api.dart';
 import 'package:anymex/utils/function.dart';
 import 'package:anymex/utils/logger.dart';
 import 'package:anymex/widgets/non_widgets/snackbar.dart';
@@ -88,6 +90,26 @@ class MediaDetailsController extends GetxController {
   final RxString searchedTitle = ''.obs;
   final RxBool isAnilistLoading = false.obs;
   final RxBool isSecondaryLoading = false.obs;
+  final RxList<AnimeTheme> animeThemes = <AnimeTheme>[].obs;
+  final RxBool isThemesLoading = false.obs;
+
+  Future<void> fetchAnimeThemes() async {
+    if (!isAnime) return;
+    final id = initialMedia.id.toString();
+    if (id.isEmpty) return;
+    isThemesLoading.value = true;
+    try {
+      final list = await AnimeThemesAPI.searchAnimeThemes(id);
+      if (!isClosed) {
+        animeThemes.assignAll(list);
+      }
+    } catch (_) {
+    } finally {
+      if (!isClosed) {
+        isThemesLoading.value = false;
+      }
+    }
+  }
 
   void retryFetch() {
     _fetchContentFromSource();
@@ -158,7 +180,8 @@ class MediaDetailsController extends GetxController {
     anilist = Get.find<AnilistAuth>();
 
     selectedPage = initialTabIndex.obs;
-    final cached = Get.find<CacheController>().getCacheById(initialMedia.id);
+    final cached = Get.find<CacheController>()
+        .getCacheById(initialMedia.id, initialMedia.serviceType);
     media = Rx<Media>(cached ?? initialMedia);
     if (Get.isRegistered<DiscordRPCController>()) {
       DiscordRPCController.instance.updateMediaPresence(media: media.value);
@@ -191,9 +214,16 @@ class MediaDetailsController extends GetxController {
     };
     offlineStorage.addListener(_offlineStorageListener!);
 
-    _fetchContentFromSource();
-    _fetchFullDetails().then((_) {
-      _fetchSecondaryAnilistData();
+    Future.microtask(() {
+      if (!isClosed) {
+        _fetchContentFromSource();
+        fetchAnimeThemes();
+        _fetchFullDetails().then((_) {
+          if (!isClosed) {
+            _fetchSecondaryAnilistData();
+          }
+        });
+      }
     });
   }
 
